@@ -28,6 +28,7 @@ use warnings;
 use strict;
 use Getopt::Std;
 use LWP::UserAgent;
+use URI;
 
 my $plugin_name = 'Nagios check_http_redirect';
 my $VERSION             = '3.00';
@@ -43,7 +44,7 @@ use constant EXIT_UNKNOWN       => 3;
 
 # parse cmd opts
 my %opts;
-getopts('vU:R:t:c:S:', \%opts);
+getopts('vU:R:t:c:S:H:', \%opts);
 $opts{t} = 5 unless (defined $opts{t});
 $opts{c} = 10 unless (defined $opts{c});
 if (not (defined $opts{U} ) or not (defined $opts{R} ) or not (defined $opts{S})) {
@@ -64,7 +65,14 @@ $ua->timeout($opts{t});
 $ua->max_redirect(int($opts{c}));
 $ua->ssl_opts(SSL_ca_path => '/etc/ssl/certs');
 
-my $response = $ua->get($opts{U});
+my $response;
+if (defined $opts{H}) {
+  my $uri = URI->new($opts{U});
+  $response = $ua->get($uri->scheme() . "://" . $opts{H}, "Host" => $uri->host());
+} else {
+  $response = $ua->get($opts{U});
+}
+
 my $count_redirects = $response->redirects;
 
 if ( $response->is_redirect )
